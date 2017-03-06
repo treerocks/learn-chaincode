@@ -2,6 +2,17 @@
 	author: Andy & James
 	time:16/7/05
 	MIT License
+
+	Change history:
+
+	2017/03/06 --James
+
+	1) Change the key in the company struct, as fabric do not support int key type map.
+
+	2) Change the Company ID as string type, which get from the args.
+
+	3) Add changeContractState func to invoke func
+
 */
 
 package main
@@ -16,8 +27,8 @@ import (
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
-var bankNo int = 0
-var cpNo int = 0
+//var bankNo int = 0
+//var cpNo int = 0
 var transactionNo int = 0
 
 /*
@@ -71,11 +82,11 @@ type CenterBank struct {
 type Company struct {
 	Name        string
 	Type        int //0: CoreCompany, 1: loanCompany
-	ID          int
+	ID          string
 	TotalNumber int
 	RestNumber  int
-	BankTotal   map[int]int
-	BankRest    map[int]int
+	BankTotal   map[string]int
+	BankRest    map[string]int
 }
 
 type FinancingContract struct {
@@ -89,11 +100,11 @@ type FinancingContract struct {
 
 type Transaction struct {
 	FromType int //CenterBank 0 Bank 1  Company 1
-	FromCpID int
-	FromBkID int
+	FromCpID string
+	FromBkID string
 	ToType   int //Bank 1 Company 2
-	ToCpID   int
-	ToBkID   int
+	ToCpID   string
+	ToBkID   string
 	Time     int64
 	Number   int
 	ID       int
@@ -141,6 +152,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.issueCoin(stub, args)
 	} else if function == "issueCoinToCp" {
 		return t.issueCoinToCp(stub, args)
+	} else if function == "changeContractState" {
+		return t.changeContractState(stub, args)
 	} else if function == "transfer" {
 		return t.transfer(stub, args)
 	}
@@ -149,24 +162,24 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 }
 
 func (t *SimpleChaincode) createCompany(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	if len(args) != 1 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 1")
+	if len(args) != 2 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 2")
 	}
 	var company Company
 	var cpBytes []byte
 	var typeInt int
 
-	banktotal := make(map[int]int)
-	banktotal[0] = 0
-	bankrest := make(map[int]int)
-	bankrest[0] = 0
+	banktotal := make(map[string]int)
+	banktotal["centerBank"] = 0
+	bankrest := make(map[string]int)
+	bankrest["centerBank"] = 0
 
 	typeInt, err := strconv.Atoi(args[1])
 	if err != nil {
 		return nil, errors.New("Expecting integer value for company type.")
 	}
 
-	company = Company{Name: args[0], Type: typeInt, TotalNumber: 0, RestNumber: 0, BankTotal: banktotal, BankRest: bankrest, ID: cpNo}
+	company = Company{Name: args[0], Type: typeInt, TotalNumber: 0, RestNumber: 0, BankTotal: banktotal, BankRest: bankrest, ID: args[1]}
 
 	err = writeCompany(stub, company)
 	if err != nil {
@@ -178,7 +191,6 @@ func (t *SimpleChaincode) createCompany(stub shim.ChaincodeStubInterface, args [
 		return nil, err
 	}
 
-	cpNo = cpNo + 1
 	return cpBytes, nil
 }
 
@@ -235,7 +247,7 @@ func (t *SimpleChaincode) issueCoin(stub shim.ChaincodeStubInterface, args []str
 		return nil, errors.New("write Error" + err.Error())
 	}
 
-	transaction := Transaction{FromType: 0, FromCpID: 0, FromBkID: 0, ToType: 0, ToCpID: 0, ToBkID: 0, Time: time.Now().Unix(), Number: issueNumber, ID: transactionNo}
+	transaction := Transaction{FromType: 0, FromCpID: "0", FromBkID: "0", ToType: 0, ToCpID: "0", ToBkID: "0", Time: time.Now().Unix(), Number: issueNumber, ID: transactionNo}
 	err = writeTransaction(stub, transaction)
 	if err != nil {
 		return nil, errors.New("write Error" + err.Error())
@@ -258,24 +270,13 @@ func (t *SimpleChaincode) issueCoinToCp(stub shim.ChaincodeStubInterface, args [
 	var centerBank CenterBank
 	var company Company
 	var companyId string
-	//var bankId string
+	var bankId string
 	var issueNumber int
 	var tsBytes []byte
 	var err error
-	var bankIdInt int
-	var companyIdInt int
 
 	companyId = args[0]
-	companyIdInt, err = strconv.Atoi(args[0])
-	if err != nil {
-		return nil, errors.New("want Integer number")
-	}
-
-	//bankId = args[1]
-	bankIdInt, err = strconv.Atoi(args[1])
-	if err != nil {
-		return nil, errors.New("want Integer number")
-	}
+	bankId = args[1]
 
 	issueNumber, err = strconv.Atoi(args[2])
 	if err != nil {
@@ -298,12 +299,12 @@ func (t *SimpleChaincode) issueCoinToCp(stub shim.ChaincodeStubInterface, args [
 	company.TotalNumber += issueNumber
 	centerBank.RestNumber = centerBank.RestNumber - issueNumber
 
-	if _, ok := company.BankTotal[bankIdInt]; ok {
-		company.BankTotal[bankIdInt] += issueNumber
-		company.BankRest[bankIdInt] += issueNumber
+	if _, ok := company.BankTotal[bankId]; ok {
+		company.BankTotal[bankId] += issueNumber
+		company.BankRest[bankId] += issueNumber
 	} else {
-		company.BankTotal[bankIdInt] = issueNumber
-		company.BankRest[bankIdInt] = issueNumber
+		company.BankTotal[bankId] = issueNumber
+		company.BankRest[bankId] = issueNumber
 	}
 
 	err = writeCenterBank(stub, centerBank)
@@ -326,7 +327,7 @@ func (t *SimpleChaincode) issueCoinToCp(stub shim.ChaincodeStubInterface, args [
 		return nil, err
 	}
 
-	transaction := Transaction{FromType: 0, FromCpID: 0, FromBkID: 0, ToType: 1, ToCpID: companyIdInt, ToBkID: bankIdInt, Time: time.Now().Unix(), Number: issueNumber, ID: transactionNo}
+	transaction := Transaction{FromType: 0, FromCpID: "0", FromBkID: "0", ToType: 1, ToCpID: companyId, ToBkID: bankId, Time: time.Now().Unix(), Number: issueNumber, ID: transactionNo}
 	err = writeTransaction(stub, transaction)
 	if err != nil {
 		return nil, errors.New("write Error" + err.Error())
@@ -347,42 +348,50 @@ func (t *SimpleChaincode) issueCoinToCp(stub shim.ChaincodeStubInterface, args [
  * arg[1]: state -> 0 pending, 1 approved, 2 rejected.
  */
 
-func (t *SimpleChaincode) changeContactState(stub shim.ChaincodeStubInterface, args []string) error {
+func (t *SimpleChaincode) changeContractState(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	if len(args) != 2 {
-		return errors.New("Incorrect number of arguments. Expecting 2")
+		return nil, errors.New("Incorrect number of arguments. Expecting 2")
 	}
 
 	var financing FinancingContract
 	var ContractId string
 	var state int
 	var err error
+	var financingBytes []byte
 
 	ContractId = args[0]
 	state, err = strconv.Atoi(args[1])
 	if err != nil {
-		return errors.New("want Integer number")
+		return nil, errors.New("want Integer number")
 	} else if state < 0 || state > 3 {
-		return errors.New("changeContractState(): state is out of range")
+		return nil, errors.New("changeContractState(): state is out of range")
 	}
 
 	financing, _, err = getFinancingContractById(stub, ContractId)
+
 	if err != nil {
-		return errors.New("changeContractState(): get errors")
+		return nil, errors.New("changeContractState(): get errors")
 	}
 
 	if financing.State == state {
-		return nil
+		financingBytes, err = json.Marshal(&financing)
+		if err != nil {
+			return financingBytes, nil
+		} else {
+			return nil, errors.New("Change Byte error")
+		}
 	} else {
 		financing.State = state
 	}
 
-	//	err = writeCenterBank(stub, centerBank)
 	err = writeFinancingContract(stub, ContractId, financing)
 	if err != nil {
-		return errors.New("write errors" + err.Error())
+		return nil, errors.New("write errors" + err.Error())
 	}
 
-	return nil
+	financingBytes, err = json.Marshal(&financing)
+
+	return financingBytes, nil
 }
 
 /*
@@ -473,37 +482,21 @@ func (t *SimpleChaincode) transfer(stub shim.ChaincodeStubInterface, args []stri
 	var cpFrom Company
 	var cpTo Company
 	var cpFromId string
-	var cpFromIdInt int
+	//var cpFromIdInt int
 	var cpToId string
-	var cpToIdInt int
-	//var bkFromId string
-	var bkFromIdInt int
-	//var bkToId string
-	var bkToIdInt int
+	//var cpToIdInt int
+	var bkFromId string
+	//var bkFromIdInt int
+	var bkToId string
+	//var bkToIdInt int
 	var issueNumber int
 	var tsBytes []byte
 	var err error
 
 	cpFromId = args[0]
-	cpFromIdInt, err = strconv.Atoi(args[0])
-	if err != nil {
-		return nil, errors.New("want integer")
-	}
-	//bkFromId = args[1]
-	bkFromIdInt, err = strconv.Atoi(args[1])
-	if err != nil {
-		return nil, errors.New("want integer")
-	}
-	cpToId = args[1]
-	cpToIdInt, err = strconv.Atoi(args[2])
-	if err != nil {
-		return nil, errors.New("want integer")
-	}
-	//bkToId = args[1]
-	bkToIdInt, err = strconv.Atoi(args[3])
-	if err != nil {
-		return nil, errors.New("want integer")
-	}
+	bkFromId = args[1]
+	cpToId = args[2]
+	bkToId = args[3]
 	issueNumber, err = strconv.Atoi(args[4])
 	if err != nil {
 		return nil, errors.New("Expecting integer value for asset holding")
@@ -513,7 +506,7 @@ func (t *SimpleChaincode) transfer(stub shim.ChaincodeStubInterface, args []stri
 	if err != nil {
 		return nil, errors.New("get errors")
 	}
-	if cpFrom.BankRest[bkFromIdInt] < issueNumber {
+	if cpFrom.BankRest[bkFromId] < issueNumber {
 		return nil, errors.New("Not enough money")
 	}
 
@@ -523,9 +516,9 @@ func (t *SimpleChaincode) transfer(stub shim.ChaincodeStubInterface, args []stri
 	}
 
 	cpFrom.RestNumber -= issueNumber
-	cpFrom.BankRest[bkFromIdInt] -= issueNumber
+	cpFrom.BankRest[bkFromId] -= issueNumber
 	cpTo.RestNumber += issueNumber
-	cpTo.BankRest[bkToIdInt] += issueNumber
+	cpTo.BankRest[bkToId] += issueNumber
 
 	err = writeCompany(stub, cpFrom)
 	if err != nil {
@@ -539,8 +532,8 @@ func (t *SimpleChaincode) transfer(stub shim.ChaincodeStubInterface, args []stri
 
 	err = writeCompany(stub, cpTo)
 	if err != nil {
-		cpFrom.RestNumber -= issueNumber
-		cpFrom.BankRest[bkFromIdInt] -= issueNumber
+		cpFrom.RestNumber += issueNumber
+		cpFrom.BankRest[bkFromId] += issueNumber
 		err = writeCompany(stub, cpFrom)
 		if err != nil {
 			return nil, errors.New("roll down error")
@@ -548,7 +541,7 @@ func (t *SimpleChaincode) transfer(stub shim.ChaincodeStubInterface, args []stri
 		return nil, errors.New("write Error" + err.Error())
 	}
 
-	transaction := Transaction{FromType: 2, FromCpID: cpFromIdInt, FromBkID: bkFromIdInt, ToType: 2, ToCpID: cpToIdInt, ToBkID: bkToIdInt, Time: time.Now().Unix(), Number: issueNumber, ID: transactionNo}
+	transaction := Transaction{FromType: 2, FromCpID: cpFromId, FromBkID: bkFromId, ToType: 2, ToCpID: cpToId, ToBkID: bkToId, Time: time.Now().Unix(), Number: issueNumber, ID: transactionNo}
 	err = writeTransaction(stub, transaction)
 	if err != nil {
 		return nil, errors.New("write Error" + err.Error())
@@ -577,18 +570,6 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 			return nil, err
 		}
 		return cbBytes, nil
-		/*
-			} else if function == "getBankById" {
-				if len(args) != 1 {
-					return nil, errors.New("Incorrect number of arguments. Expecting 0")
-				}
-				_, bankBytes, err := getBankById(stub, args[0])
-				if err != nil {
-					fmt.Println("Error unmarshalling centerBank")
-					return nil, err
-				}
-				return bankBytes, nil
-		*/
 	} else if function == "getCompanyById" {
 		if len(args) != 1 {
 			return nil, errors.New("Incorrect number of arguments. Expecting 0")
@@ -610,35 +591,21 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 		}
 		return tsBytes, nil
 		/*
-			} else if function == "getBanks" {
+			} else if function == "getCompanys" {
 				if len(args) != 0 {
 					return nil, errors.New("Incorrect number of arguments. Expecting 0")
 				}
-				banks, err := getBanks(stub)
+				cps, err := getCompanys(stub)
 				if err != nil {
 					fmt.Println("Error unmarshalling")
 					return nil, err
 				}
-				bankBytes, err1 := json.Marshal(&banks)
+				cpBytes, err1 := json.Marshal(&cps)
 				if err1 != nil {
 					fmt.Println("Error marshalling banks")
 				}
-				return bankBytes, nil
+				return cpBytes, nil
 		*/
-	} else if function == "getCompanys" {
-		if len(args) != 0 {
-			return nil, errors.New("Incorrect number of arguments. Expecting 0")
-		}
-		cps, err := getCompanys(stub)
-		if err != nil {
-			fmt.Println("Error unmarshalling")
-			return nil, err
-		}
-		cpBytes, err1 := json.Marshal(&cps)
-		if err1 != nil {
-			fmt.Println("Error marshalling banks")
-		}
-		return cpBytes, nil
 	} else if function == "getTransactions" {
 		if len(args) != 0 {
 			return nil, errors.New("Incorrect number of arguments. Expecting 0")
@@ -709,6 +676,7 @@ func getTransactionById(stub shim.ChaincodeStubInterface, id string) (Transactio
 	return transaction, tsBytes, nil
 }
 
+/*
 func getCompanys(stub shim.ChaincodeStubInterface) ([]Company, error) {
 	var companys []Company
 	var number string
@@ -740,6 +708,8 @@ func getCompanys(stub shim.ChaincodeStubInterface) ([]Company, error) {
 	}
 	return nil, nil
 }
+
+*/
 
 func getTransactions(stub shim.ChaincodeStubInterface) ([]Transaction, error) {
 	var transactions []Transaction
@@ -806,10 +776,7 @@ func writeCompany(stub shim.ChaincodeStubInterface, company Company) error {
 	if err != nil {
 		return err
 	}
-	companyId = strconv.Itoa(company.ID)
-	if err != nil {
-		return errors.New("want Integer number")
-	}
+	companyId = company.ID
 	err = stub.PutState("company"+companyId, cpBytes)
 	if err != nil {
 		return errors.New("PutState Error" + err.Error())
