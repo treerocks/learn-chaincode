@@ -5,6 +5,10 @@
 
 	Change history:
 
+	2017/03/07 --James
+
+	1)Delete some commented code.
+
 	2017/03/06 --James
 
 	1) Change the key in the company struct, as fabric do not support int key type map.
