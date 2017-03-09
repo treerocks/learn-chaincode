@@ -5,6 +5,13 @@
 
 	Change history:
 
+	2017/03/09 --James
+	1) fix bug1: init platform donot init the Rest number.
+
+	2) fix bug2: createCompany() donnot have arguments as companyId
+
+	3) fix bug3: add getfinancingContractById into Query method.
+
 	2017/03/07 --James
 
 	1)Delete some commented code.
@@ -95,7 +102,7 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string
 	if err != nil {
 		return nil, errors.New("Expecting integer value for asset holding")
 	}
-	centerBank = CenterBank{Name: args[0], TotalNumber: totalNumber, RestNumber: 0}
+	centerBank = CenterBank{Name: args[0], TotalNumber: totalNumber, RestNumber: totalNumber}
 	err = writeCenterBank(stub, centerBank)
 	if err != nil {
 		return nil, errors.New("write Error" + err.Error())
@@ -126,8 +133,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 }
 
 func (t *SimpleChaincode) createCompany(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	if len(args) != 2 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 2")
+	if len(args) != 3 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 3")
 	}
 	var company Company
 	var cpBytes []byte
@@ -143,7 +150,7 @@ func (t *SimpleChaincode) createCompany(stub shim.ChaincodeStubInterface, args [
 		return nil, errors.New("Expecting integer value for company type.")
 	}
 
-	company = Company{Name: args[0], Type: typeInt, TotalNumber: 0, RestNumber: 0, BankTotal: banktotal, BankRest: bankrest, ID: args[1]}
+	company = Company{Name: args[0], Type: typeInt, TotalNumber: 0, RestNumber: 0, BankTotal: banktotal, BankRest: bankrest, ID: args[3]}
 
 	err = writeCompany(stub, company)
 	if err != nil {
@@ -460,6 +467,16 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 			return nil, err
 		}
 		return tsBytes, nil
+	} else if function == "getFinancingContractById" {
+		if len(args) != 1 {
+			return nil, errors.New("Incorrect number of arguments. Expecting 0")
+		}
+		_, fcBytes, err := getFinancingContractById(stub, args[0])
+		if err != nil {
+			fmt.Println("Error unmarshalling")
+			return nil, err
+		}
+		return fcBytes, nil
 	} else if function == "getTransactions" {
 		if len(args) != 0 {
 			return nil, errors.New("Incorrect number of arguments. Expecting 0")
