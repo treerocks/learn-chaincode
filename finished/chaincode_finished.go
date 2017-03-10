@@ -7,6 +7,7 @@
 
 	2017/03/10 --James
 	1) change the writeFinancingContract()
+	Cannot return the Financing Data, TBD
 
 	2017/03/09 --James
 	1) fix bug1: init platform donot init the Rest number.
@@ -128,6 +129,8 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function stri
 		return t.issueCoinToCp(stub, args)
 	} else if function == "changeContractState" {
 		return t.changeContractState(stub, args)
+	} else if function == "createFinancingContract" {
+		return t.createFinancingContract(stub, args)
 	} else if function == "transfer" {
 		return t.transfer(stub, args)
 	}
