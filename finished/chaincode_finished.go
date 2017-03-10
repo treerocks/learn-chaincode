@@ -5,6 +5,9 @@
 
 	Change history:
 
+	2017/03/10 --James
+	1) change the writeFinancingContract()
+
 	2017/03/09 --James
 	1) fix bug1: init platform donot init the Rest number.
 
@@ -172,15 +175,13 @@ func (t *SimpleChaincode) createFinancingContract(stub shim.ChaincodeStubInterfa
 	var financing FinancingContract
 	var financingBytes []byte
 	var amountNumber int
-	var ContractId string
-	ContractId = args[0]
 	amountNumber, err := strconv.Atoi(args[4])
 	if err != nil {
 		return nil, errors.New("Expecting integer value for asset holding")
 	}
 	financing = FinancingContract{ContractId: args[0], State: 0, CoreCompanyID: args[1], FinanceCompanyID: args[2], BankID: args[3], Amount: amountNumber}
 
-	err = writeFinancingContract(stub, ContractId, financing)
+	err = writeFinancingContract(stub, financing)
 	if err != nil {
 		return nil, errors.New("write Error" + err.Error())
 	}
@@ -349,7 +350,7 @@ func (t *SimpleChaincode) changeContractState(stub shim.ChaincodeStubInterface, 
 		financing.State = state
 	}
 
-	err = writeFinancingContract(stub, ContractId, financing)
+	err = writeFinancingContract(stub, financing)
 	if err != nil {
 		return nil, errors.New("write errors" + err.Error())
 	}
@@ -449,7 +450,7 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 		return cbBytes, nil
 	} else if function == "getCompanyById" {
 		if len(args) != 1 {
-			return nil, errors.New("Incorrect number of arguments. Expecting 0")
+			return nil, errors.New("Incorrect number of arguments. Expecting 1")
 		}
 		_, cpBytes, err := getCompanyById(stub, args[0])
 		if err != nil {
@@ -459,7 +460,7 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 		return cpBytes, nil
 	} else if function == "getTransactionById" {
 		if len(args) != 1 {
-			return nil, errors.New("Incorrect number of arguments. Expecting 0")
+			return nil, errors.New("Incorrect number of arguments. Expecting 1")
 		}
 		_, tsBytes, err := getTransactionById(stub, args[0])
 		if err != nil {
@@ -469,7 +470,7 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 		return tsBytes, nil
 	} else if function == "getFinancingContractById" {
 		if len(args) != 1 {
-			return nil, errors.New("Incorrect number of arguments. Expecting 0")
+			return nil, errors.New("Incorrect number of arguments. Expecting 1")
 		}
 		_, fcBytes, err := getFinancingContractById(stub, args[0])
 		if err != nil {
@@ -592,13 +593,16 @@ func writeCenterBank(stub shim.ChaincodeStubInterface, centerBank CenterBank) er
 }
 
 // Write the financing request to the block chain
-func writeFinancingContract(stub shim.ChaincodeStubInterface, ContractId string, financing FinancingContract) error {
+func writeFinancingContract(stub shim.ChaincodeStubInterface, financing FinancingContract) error {
+	var ConId string
 	financingBytes, err := json.Marshal(&financing)
 	if err != nil {
 		return err
 	}
 
-	err = stub.PutState("financing"+ContractId, financingBytes)
+	ConId = financing.ContractId
+
+	err = stub.PutState("financing"+ConId, financingBytes)
 	if err != nil {
 		return errors.New("PutState Error" + err.Error())
 	}
