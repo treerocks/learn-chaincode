@@ -188,19 +188,25 @@ func (t *SimpleChaincode) createFinancingContract(stub shim.ChaincodeStubInterfa
 	if err != nil {
 		return nil, errors.New("Expecting integer value for asset holding")
 	}
-	financing = FinancingContract{ContractId: args[0], State: 0, CoreCompanyID: args[1], FinanceCompanyID: args[2], BankID: args[3], Amount: amountNumber}
 
-	err = writeFinancingContract(stub, financing)
-	if err != nil {
-		return nil, errors.New("write Error" + err.Error())
+	financingBytes, err = stub.GetState("financing" + args[2])
+	if financingBytes == nil {
+		financing = FinancingContract{ContractId: args[0], State: 0, CoreCompanyID: args[1], FinanceCompanyID: args[2], BankID: args[3], Amount: amountNumber}
+
+		err = writeFinancingContract(stub, financing)
+		if err != nil {
+			return nil, errors.New("write Error" + err.Error())
+		}
+	} else {
+		return financingBytes, nil
 	}
 
 	financingBytes, err = json.Marshal(&financing)
 	if err != nil {
-		return nil, errors.New("Error retrieving cbBytes")
+		return nil, errors.New("Error retrieving fcBytes")
 	}
 
-	fmt.Println(string(financingBytes))
+	//fmt.Println(string(financingBytes))
 	return financingBytes, nil
 }
 
