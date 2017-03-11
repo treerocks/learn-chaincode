@@ -172,8 +172,8 @@ func (t *SimpleChaincode) createCompany(stub shim.ChaincodeStubInterface, args [
 }
 
 func (t *SimpleChaincode) createFinancingContract(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	if len(args) != 4 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 4")
+	if len(args) != 5 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 5")
 	}
 	var financing FinancingContract
 	var financingBytes []byte
