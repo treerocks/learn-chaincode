@@ -156,11 +156,17 @@ func (t *SimpleChaincode) createCompany(stub shim.ChaincodeStubInterface, args [
 		return nil, errors.New("Expecting integer value for company type.")
 	}
 
-	company = Company{Name: args[0], Type: typeInt, TotalNumber: 0, RestNumber: 0, BankTotal: banktotal, BankRest: bankrest, ID: args[3]}
+	cpBytes, err = stub.GetState("company" + args[2])
+	if cpBytes == nil {
 
-	err = writeCompany(stub, company)
-	if err != nil {
-		return nil, errors.New("write Error" + err.Error())
+		company = Company{Name: args[0], Type: typeInt, TotalNumber: 0, RestNumber: 0, BankTotal: banktotal, BankRest: bankrest, ID: args[2]}
+
+		err = writeCompany(stub, company)
+		if err != nil {
+			return nil, errors.New("write Error" + err.Error())
+		}
+	} else {
+		return cpBytes, nil
 	}
 
 	cpBytes, err = json.Marshal(&company)
@@ -332,7 +338,7 @@ func (t *SimpleChaincode) changeContractState(stub shim.ChaincodeStubInterface, 
 	state, err = strconv.Atoi(args[1])
 	if err != nil {
 		return nil, errors.New("want Integer number")
-	} else if state < 0 || state > 3 {
+	} else if state < 0 || state > 2 {
 		return nil, errors.New("changeContractState(): state is out of range")
 	}
 
@@ -520,7 +526,7 @@ func getCompanyById(stub shim.ChaincodeStubInterface, id string) (Company, []byt
 	}
 	err = json.Unmarshal(cpBytes, &company)
 	if err != nil {
-		fmt.Println("Error unmarshalling centerBank")
+		fmt.Println("Error unmarshalling company")
 	}
 	return company, cpBytes, nil
 }
