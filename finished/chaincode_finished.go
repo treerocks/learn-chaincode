@@ -1,27 +1,20 @@
 /*
-	author: Andy & James
-	time:16/7/05
-	MIT License
-
 	Change history:
-
-	2017/03/10 --James
+	change4
 	1) change the writeFinancingContract()
 	Cannot return the Financing Data, TBD
 
-	2017/03/09 --James
+	change3
 	1) fix bug1: init platform donot init the Rest number.
 
 	2) fix bug2: createCompany() donnot have arguments as companyId
 
 	3) fix bug3: add getfinancingContractById into Query method.
 
-	2017/03/07 --James
-
+	change 2
 	1)Delete some commented code.
 
-	2017/03/06 --James
-
+	change 1
 	1) Change the key in the company struct, as fabric do not support int key type map.
 
 	2) Change the Company ID as string type, which get from the args.
