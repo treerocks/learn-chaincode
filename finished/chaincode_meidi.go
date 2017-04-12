@@ -6,6 +6,7 @@ Chaincode for Meidi Corp.
 Chang history:
 
 
+2017/4/12 Building successfully.
 2017/4/11 init version.  
 
 
@@ -85,7 +86,7 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.queryTransaction(stub, args)
 	}
 
-	return shim.Error("Invalid invoke function name. Expecting \"invoke\" \"delete\" \"query\"")
+	return shim.Error("Invalid invoke function name. Expecting \"createBill\" \"changeBillStaus\" \"queryBill\" \"queryTransaction\"")
 }
 
 
